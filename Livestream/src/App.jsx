@@ -1,31 +1,34 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import ReactPlayer from 'react-player';
-
+import {ToastContainer} from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import {AiFillDelete} from 'react-icons/ai'
+import { addOverlays, deleteOverlays, getOverlays } from './redux/overSlice';
 const App = () => {
+  const dispatch = useDispatch();
   const [livestreamURL, setLivestreamURL] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
-  const [overlays, setOverlays] = useState([]);
   const [newOverlay, setNewOverlay] = useState('');
-
+  const overlays=useSelector((state)=>state.overlays.overlays);
   useEffect(() => {
     // Fetch overlays from the backend
-    axios.get('/api/overlays').then((response) => {
-      setOverlays(response.data);
-    });
-  }, []);
+    dispatch(getOverlays());
+    console.log("overlays",overlays);
+  }, [dispatch]);
 
+  const overlayDelete=async(id)=>{
+    await dispatch(deleteOverlays(id));
+    await dispatch(getOverlays());
+  }
   const togglePlay = () => {
     setIsPlaying(!isPlaying);
   };
 
-  const addOverlay = () => {
+  const addOverlay =async() => {
     // Send a POST request to add a new overlay
-    axios.post('/api/overlays', { content: newOverlay }).then((response) => {
-      // Refresh the list of overlays
-      setOverlays([...overlays, response.data]);
-      setNewOverlay('');
-    });
+    await dispatch(addOverlays({newOverlay,livestreamURL }));
+    await dispatch(getOverlays());
   };
 
   return (
@@ -69,13 +72,17 @@ const App = () => {
 
       <div className="mb-4">
         <h2 className="text-xl font-semibold mb-2">Overlays</h2>
-        <ul>
-          {overlays.map((overlay, index) => (
-            <li key={index} className="mb-2">
-              {overlay.content}
-            </li>
+        <div>
+          {overlays && overlays.map((overlay) => (
+            <div key={overlay._id} className="mb-2 shadow-inner w-fit p-3 flex">
+              <div>
+                <h1><span className='font-bold'>LiveStream</span>  {overlay.content}</h1>
+                <p><span className='font-bold'>URL  </span>{overlay.url}</p>
+              </div>
+              <AiFillDelete className='cursor-pointer' color='red' onClick={()=>overlayDelete(overlay._id)}/>
+            </div>
           ))}
-        </ul>
+        </div>
       </div>
 
       <div>
@@ -88,6 +95,7 @@ const App = () => {
           />
         )}
       </div>
+      <ToastContainer position='bottom-center' />
     </div>
   );
 };
